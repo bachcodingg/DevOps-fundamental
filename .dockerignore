@@ -1,45 +1,31 @@
-# Git files
+# Git and GitHub files
 .git
 .gitignore
-
-# GitHub Actions
 .github
-
-# Documentation
-README.md
-*.md
 
 # Docker files (not needed inside container)
 Dockerfile
 docker-compose.yml
 .dockerignore
 
-# Configuration files for development
+# Nginx configuration (using default for now)
 nginx.conf
 
-# Development files
+# Documentation
+README.md
+*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archive files
+*.zip
+startbootstrap-landing-page-gh-pages.zip
+
+# IDE files
 .vscode
 .idea
 
 # Logs
 *.log
-npm-debug.log*
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-
-# Zip files
-*.zip
-
-# Archive files
-startbootstrap-landing-page-gh-pages.zip
