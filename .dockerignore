@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# GitHub Actions
+.github
+
+# Documentation
+README.md
+*.md
+
+# Docker files (not needed inside container)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Configuration files for development
+nginx.conf
+
+# Development files
+.vscode
+.idea
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Zip files
+*.zip
+
+# Archive files
+startbootstrap-landing-page-gh-pages.zip
