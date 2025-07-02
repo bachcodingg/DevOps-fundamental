@@ -1,11 +1,11 @@
 name: Build and Deploy Website
 
-# Trigger the workflow
+# Trigger configuration
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 # Environment variables
 env:
@@ -13,7 +13,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-deploy:
+  build-and-test:
     runs-on: ubuntu-latest
     
     permissions:
@@ -21,15 +21,12 @@ jobs:
       packages: write
 
     steps:
-      # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Log in to Container Registry
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
@@ -37,7 +34,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata for Docker
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -49,7 +45,6 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Build and push Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -60,39 +55,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Test the built image (optional)
       - name: Test container
         run: |
-          docker run --rm -d -p 3000:80 --name test-container ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          sleep 10
-          curl -f http://localhost:3000 || exit 1
-          docker stop test-container
-
-  # Deploy job (customize based on your deployment target)
-  deploy:
-    needs: build-and-deploy
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Deploy to production
-        run: |
-          echo "Add your deployment steps here"
-          # Examples:
-          # - Deploy to cloud provider (AWS, Azure, GCP)
-          # - Deploy to VPS via SSH
-          # - Deploy to Kubernetes
-          # - Update Docker Compose on server
+          echo "🧪 Testing container..."
+          # Convert image name to lowercase for Docker compatibility
+          IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" | tr '[:upper:]' '[:lower:]')
+          echo "Using image: $IMAGE_NAME_LOWER"
           
-      # Example: Deploy via SSH to your server
-      # - name: Deploy via SSH
-      #   uses: appleboy/ssh-action@v1.0.0
-      #   with:
-      #     host: ${{ secrets.HOST }}
-      #     username: ${{ secrets.USERNAME }}
-      #     key: ${{ secrets.SSH_KEY }}
-      #     script: |
-      #       docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-      #       docker stop my-website || true
-      #       docker rm my-website || true
-      #       docker run -d -p 80:80 --name my-website ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker run -d -p 3000:80 --name test-container $IMAGE_NAME_LOWER
+          sleep 10
+          
+          # Test if website loads
+          echo "📡 Testing website response..."
+          curl -f http://localhost:3000 || exit 1
+          
+          # Clean up
+          echo "🧹 Cleaning up test container..."
+          docker stop test-container
+          docker rm test-container
+          
+      - name: Success message
+        run: echo "✅ Docker build and test completed successfully!"
