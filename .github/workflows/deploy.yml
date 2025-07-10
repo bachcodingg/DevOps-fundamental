@@ -24,6 +24,14 @@ env:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    
+    # 🔑 CRITICAL: Add these permissions
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+      security-events: write
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -63,12 +71,15 @@ jobs:
         run: |
           echo "🧪 Testing container..."
           IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "Testing image: $IMAGE_TAG"
+          
           docker run -d -p 3000:80 --name test-container $IMAGE_TAG
           sleep 15
           
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || echo "000")
+          # Health check
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ || echo "000")
           if [ "$RESPONSE" = "200" ]; then
-            echo "✅ Health check passed!"
+            echo "✅ Health check passed! (HTTP $RESPONSE)"
           else
             echo "❌ Health check failed (HTTP $RESPONSE)"
             docker logs test-container
@@ -77,6 +88,9 @@ jobs:
           
           docker stop test-container
           docker rm test-container
+      
+      - name: Success message
+        run: echo "✅ Docker build and test completed successfully!"
 
   # Deploy to Development (automatic for feature branches)
   deploy-development:
@@ -88,11 +102,8 @@ jobs:
       - name: Deploy to Development
         run: |
           echo "🚀 Deploying to Development Environment"
-          echo "Environment: ${{ vars.NODE_ENV }}"
-          echo "Log Level: ${{ vars.LOG_LEVEL }}"
-          echo "Deployment URL: ${{ vars.DEPLOYMENT_URL }}"
-          echo "Database: ${{ secrets.DATABASE_URL }}"
-          echo "Health Check Interval: ${{ vars.HEALTH_CHECK_INTERVAL }}ms"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
 
   # Deploy to Staging (automatic for develop branch)
   deploy-staging:
@@ -104,17 +115,10 @@ jobs:
       - name: Deploy to Staging
         run: |
           echo "🚀 Deploying to Staging Environment"
-          echo "Environment: ${{ vars.NODE_ENV }}"
-          echo "Log Level: ${{ vars.LOG_LEVEL }}"
-          echo "Deployment URL: ${{ vars.DEPLOYMENT_URL }}"
-          echo "Health Check Interval: ${{ vars.HEALTH_CHECK_INTERVAL }}ms"
-          
-          # Example staging deployment
-          echo "Pulling image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
-          # docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop
-          # kubectl set image deployment/myapp myapp=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop -n staging
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop"
 
-  # Deploy to Production (automatic for main branch, with approval)
+  # Deploy to Production (automatic for main branch)
   deploy-production:
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
@@ -124,24 +128,10 @@ jobs:
       - name: Deploy to Production
         run: |
           echo "🚀 Deploying to Production Environment"
-          echo "Environment: ${{ vars.NODE_ENV }}"
-          echo "Log Level: ${{ vars.LOG_LEVEL }}"
-          echo "Deployment URL: ${{ vars.DEPLOYMENT_URL }}"
-          echo "Health Check Interval: ${{ vars.HEALTH_CHECK_INTERVAL }}ms"
-          
-          # Example production deployment
-          echo "Pulling image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          # docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          # kubectl set image deployment/myapp myapp=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest -n production
-          
-      - name: Notify deployment success
-        run: |
-          echo "✅ Production deployment completed successfully!"
-          # curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
-          #   -H 'Content-type: application/json' \
-          #   --data '{"text":"🚀 Production deployment successful for commit ${{ github.sha }}"}'
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
-  # Manual deployment (uses workflow_dispatch input)
+  # Manual deployment
   deploy-manual:
     needs: build-and-test
     if: github.event_name == 'workflow_dispatch'
@@ -151,6 +141,5 @@ jobs:
       - name: Deploy to Selected Environment
         run: |
           echo "🚀 Manual deployment to: ${{ github.event.inputs.environment }}"
-          echo "Environment: ${{ vars.NODE_ENV }}"
-          echo "Log Level: ${{ vars.LOG_LEVEL }}"
-          echo "Deployment URL: ${{ vars.DEPLOYMENT_URL }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
